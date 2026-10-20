@@ -17,10 +17,29 @@ if (!fs.existsSync(AUDIO_DIR)) {
 }
 
 // ── Initialize SQLite Database ───────────────────────────────────────────────
-export const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.pragma('synchronous = NORMAL');
+let dbInstance: Database.Database;
+try {
+  dbInstance = new Database(DB_PATH);
+  dbInstance.pragma('journal_mode = WAL');
+  dbInstance.pragma('foreign_keys = ON');
+  dbInstance.pragma('synchronous = NORMAL');
+  dbInstance.prepare('SELECT 1').get();
+} catch (err: any) {
+  console.warn('[SQLite] Database corruption or error detected, recreating database:', err?.message);
+  try {
+    if (fs.existsSync(DB_PATH)) fs.unlinkSync(DB_PATH);
+    if (fs.existsSync(DB_PATH + '-wal')) fs.unlinkSync(DB_PATH + '-wal');
+    if (fs.existsSync(DB_PATH + '-shm')) fs.unlinkSync(DB_PATH + '-shm');
+  } catch (e) {
+    console.error('Failed to clean up malformed DB files:', e);
+  }
+  dbInstance = new Database(DB_PATH);
+  dbInstance.pragma('journal_mode = WAL');
+  dbInstance.pragma('foreign_keys = ON');
+  dbInstance.pragma('synchronous = NORMAL');
+}
+
+export const db = dbInstance;
 
 // ── Models & Interfaces ──────────────────────────────────────────────────────
 

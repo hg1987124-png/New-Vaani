@@ -96,8 +96,8 @@ function setUserInfo() {
   const settingsSelect = document.querySelector('#settings select');
   const settingsTz = document.getElementById('settingsTimezone');
 
-  if (profileEl) profileEl.textContent = name;
-  if (roleBadge) roleBadge.textContent = isFaculty ? '👨‍🏫 Faculty' : '🎓 Student';
+  if (profileEl) profileEl.innerHTML = `<i data-lucide="user-circle" style="width:16px;height:16px;color:var(--muted);flex-shrink:0;"></i> <span>${escapeHtml(name)}</span>`;
+  if (roleBadge) roleBadge.innerHTML = isFaculty ? '<i data-lucide="graduation-cap"></i> Faculty' : '<i data-lucide="user"></i> Student';
   if (eyebrow) eyebrow.textContent = 'Welcome back, ' + name + '!';
   if (facEyebrow) facEyebrow.textContent = 'Welcome back, ' + name + '!';
   if (settingsName) settingsName.value = name;
@@ -143,9 +143,11 @@ function setUserInfo() {
     if (facAvatar) {
       facAvatarDisplay.innerHTML = `<img src="${facAvatar}" alt="Profile">`;
     } else {
-      facAvatarDisplay.textContent = '👨‍🏫';
+      facAvatarDisplay.innerHTML = '<i data-lucide="user" style="width:36px;height:36px;color:var(--p)"></i>';
     }
   }
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 setUserInfo();
 
@@ -464,24 +466,26 @@ function rowHtml(x) {
   const audioSrc = x.audioDataUrl ? x.audioDataUrl : `${API_BASE}/${x.id}/audio`;
   const displayDate = formatLocalDisplayDate(x.createdAtIso || x.createdAt);
   const canDelete = isFacultyRole();
-  const subjectLabel = x.storageBoxName || x.subject || x.lectureName || '-';
+  const subjectLabel = x.storageBoxName
+    ? `<span class="box-tag"><i data-lucide="archive"></i> ${escapeHtml(x.storageBoxName)}</span>`
+    : escapeHtml(x.subject || x.lectureName || '-');
   return `
     <tr>
       <td><b>${escapeHtml(x.title)}</b></td>
-      <td>${escapeHtml(subjectLabel)}</td>
+      <td>${subjectLabel}</td>
       <td>${escapeHtml(x.professorName || '-')}</td>
       <td>${escapeHtml(x.duration || '00:00')}</td>
       <td>${escapeHtml(displayDate)}</td>
-      <td><span class="badge">🌐 Published</span></td>
+      <td><span class="badge badge-published"><i data-lucide="check-circle-2"></i> Published</span></td>
       <td>
         ${x.hasAudio
-          ? `<audio controls src="${audioSrc}" preload="metadata" style="height:32px;width:190px;outline:none;"></audio>`
+          ? `<audio controls src="${audioSrc}" preload="metadata" style="height:32px;width:190px;outline:none;border-radius:6px;"></audio>`
           : '<small class="muted">No Audio</small>'}
       </td>
       <td style="white-space:nowrap;">
-        <button class="outline view" data-id="${x.id}">🎧 Listen &amp; View</button>
+        <button class="primary act-btn view" data-id="${x.id}"><i data-lucide="headphones"></i> Listen &amp; View</button>
         ${canDelete
-          ? `<button class="outline delete-rec" data-id="${x.id}" style="color:#d32f2f;border-color:#ffcdd2;margin-left:4px;">Delete</button>`
+          ? `<button class="outline act-btn delete-rec" data-id="${x.id}" style="color:var(--danger);border-color:var(--danger-border);margin-left:4px;"><i data-lucide="trash-2"></i> Delete</button>`
           : ''}
       </td>
     </tr>`;
@@ -503,7 +507,7 @@ function syncStudentSubjectFilter() {
 
   const opts = ['<option value="ALL">All Storage Boxes &amp; Subjects</option>'];
   Array.from(topics).forEach(t => {
-    opts.push(`<option value="${escapeHtml(t)}">📦 ${escapeHtml(t)}</option>`);
+    opts.push(`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`);
   });
   sel.innerHTML = opts.join('');
   if (Array.from(sel.options).some(o => o.value === prevVal)) {
@@ -556,6 +560,8 @@ function renderRecordings() {
     return acc + (parts[0] || 0) + (parts[1] || 0) / 60;
   }, 0);
   if (statAudEl) statAudEl.textContent = (totalMin / 60).toFixed(1) + ' hrs';
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 // ── Detail view ────────────────────────────────────────────
@@ -963,15 +969,15 @@ if (facDateInput && !facDateInput.value) {
 function getFacultyStatusBadgeHtml(rec) {
   const st = rec.facultyStatus || (rec.published !== false ? 'PUBLISHED' : 'READY');
   if (st === 'PUBLISHED') {
-    return '<span class="badge badge-published">🚀 PUBLISHED</span>';
+    return '<span class="badge badge-published"><i data-lucide="check-circle-2"></i> Published</span>';
   }
   if (st === 'PROCESSING') {
-    return '<span class="badge badge-processing">⏳ PROCESSING</span>';
+    return '<span class="badge badge-processing"><i data-lucide="loader-2"></i> Processing</span>';
   }
   if (st === 'DRAFT') {
-    return '<span class="badge badge-draft">📝 DRAFT</span>';
+    return '<span class="badge badge-draft"><i data-lucide="file-edit"></i> Draft</span>';
   }
-  return '<span class="badge badge-ready">👁️ READY FOR REVIEW</span>';
+  return '<span class="badge badge-ready"><i data-lucide="eye"></i> Ready for Review</span>';
 }
 
 function facultyRowHtml(x, showPublishToggle = true) {
@@ -979,24 +985,26 @@ function facultyRowHtml(x, showPublishToggle = true) {
   const isPub = x.facultyStatus === 'PUBLISHED' || x.published === true;
   const pubBtn = showPublishToggle
     ? (isPub
-        ? `<button class="outline act-btn fac-pub-toggle" data-id="${x.id}" data-publish="0" style="color:#b45309;border-color:#fde68a;">🔒 Unpublish</button>`
-        : `<button class="primary act-btn fac-pub-toggle" data-id="${x.id}" data-publish="1" style="background:#17864a;border-color:#17864a;">🚀 Publish</button>`)
+        ? `<button class="outline act-btn fac-pub-toggle" data-id="${x.id}" data-publish="0" style="color:var(--warning);border-color:var(--warning-border);"><i data-lucide="lock"></i> Unpublish</button>`
+        : `<button class="primary act-btn fac-pub-toggle" data-id="${x.id}" data-publish="1" style="background:var(--success);border-color:var(--success);"><i data-lucide="send"></i> Publish</button>`)
     : '';
-  const boxOrSubject = x.storageBoxName ? `📦 ${x.storageBoxName}` : (x.subject || x.lectureName || 'General');
+  const boxOrSubject = x.storageBoxName
+    ? `<span class="box-tag"><i data-lucide="archive"></i> ${escapeHtml(x.storageBoxName)}</span>`
+    : escapeHtml(x.subject || x.lectureName || 'General');
 
   return `
     <tr>
       <td><b>${escapeHtml(x.title)}</b></td>
-      <td>${escapeHtml(boxOrSubject)}</td>
+      <td>${boxOrSubject}</td>
       <td>${escapeHtml(x.classCourse || 'SE Computer Engineering')}</td>
       <td>${escapeHtml(displayDate)}</td>
       <td>${getFacultyStatusBadgeHtml(x)}</td>
       <td>${escapeHtml(x.duration || '00:00')}</td>
       <td style="white-space:nowrap;">
-        <button class="outline act-btn fac-review-btn" data-id="${x.id}" data-edit="0">👁 Review</button>
-        <button class="outline act-btn fac-review-btn" data-id="${x.id}" data-edit="1">✏ Edit</button>
+        <button class="outline act-btn fac-review-btn" data-id="${x.id}" data-edit="0"><i data-lucide="eye"></i> Review</button>
+        <button class="outline act-btn fac-review-btn" data-id="${x.id}" data-edit="1"><i data-lucide="edit-3"></i> Edit</button>
         ${pubBtn}
-        <button class="outline act-btn delete-rec" data-id="${x.id}" style="color:#d32f2f;border-color:#ffcdd2;">🗑 Delete</button>
+        <button class="outline act-btn delete-rec" data-id="${x.id}" style="color:var(--danger);border-color:var(--danger-border);"><i data-lucide="trash-2"></i> Delete</button>
       </td>
     </tr>`;
 }
@@ -1045,6 +1053,8 @@ function renderFacultyViews() {
   if (allRowsEl) {
     allRowsEl.innerHTML = filtered.map(r => facultyRowHtml(r, true)).join('') || emptyRow;
   }
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 
   // If Analytics section is visible, keep it in sync with fresh recordings
   if (document.getElementById('facultyAnalytics')?.classList.contains('active')) {
@@ -1752,35 +1762,37 @@ function renderSelectedDateDetails() {
           <div>${statusBadge}</div>
         </div>
 
-        <div class="ana-cal-lecture-meta" style="background:#fff;padding:8px 12px;border-radius:7px;border:1px solid #ede9f6;margin:4px 0;">
-          <span>⏱ Duration: <b>${escapeHtml(lec.duration || '00:00')}</b></span>
+        <div class="ana-cal-lecture-meta" style="background:#fff;padding:8px 12px;border-radius:7px;border:1px solid var(--border);margin:6px 0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:var(--muted);">
+          <span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="clock" style="width:13px;height:13px;"></i> Duration: <b style="color:var(--text);">${escapeHtml(lec.duration || '00:00')}</b></span>
           <span>&bull;</span>
-          <span>▶️ Plays: <b>${lec.playsCount || 0}</b></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="play" style="width:13px;height:13px;"></i> Plays: <b style="color:var(--text);">${lec.playsCount || 0}</b></span>
           <span>&bull;</span>
-          <span>👥 Students: <b>${lec.studentsAccessed || 0}</b></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="users" style="width:13px;height:13px;"></i> Students: <b style="color:var(--text);">${lec.studentsAccessed || 0}</b></span>
           <span>&bull;</span>
-          <span>⏳ Avg: <b>${escapeHtml(lec.avgListeningTime || '0m 00s')}</b></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;"><i data-lucide="hourglass" style="width:13px;height:13px;"></i> Avg: <b style="color:var(--text);">${escapeHtml(lec.avgListeningTime || '0m 00s')}</b></span>
         </div>
 
-        <div class="ana-cal-lecture-actions">
-          <button type="button" class="primary act-btn cal-act-review" data-id="${lec.id}" style="padding:6px 12px;font-size:12px;">
-            👁️ Review &amp; Edit
+        <div class="ana-cal-lecture-actions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          <button type="button" class="primary act-btn cal-act-review" data-id="${lec.id}" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
+            <i data-lucide="eye" style="width:13px;height:13px;"></i> Review &amp; Edit
           </button>
-          <button type="button" class="outline act-btn cal-act-publish-toggle" data-id="${lec.id}" data-pub="${isPub ? 1 : 0}" style="padding:6px 12px;font-size:12px;${isPub ? 'color:#b45309;border-color:#fde68a;' : 'color:#15803d;border-color:#bbf7d0;'}">
-            ${isPub ? '🔒 Unpublish (SQLite)' : '🚀 Publish (SQLite)'}
+          <button type="button" class="outline act-btn cal-act-publish-toggle" data-id="${lec.id}" data-pub="${isPub ? 1 : 0}" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:5px;${isPub ? 'color:var(--warning);border-color:var(--warning-border);' : 'color:var(--success);border-color:var(--success-border);'}">
+            ${isPub ? '<i data-lucide="lock" style="width:13px;height:13px;"></i> Unpublish' : '<i data-lucide="send" style="width:13px;height:13px;"></i> Publish'}
           </button>
-          <button type="button" class="outline act-btn cal-act-reschedule" data-id="${lec.id}" data-title="${escapeHtml(lec.title)}" data-date="${escapeHtml(lec.lectureDate || '')}" style="padding:6px 12px;font-size:12px;">
-            📅 Change Date
+          <button type="button" class="outline act-btn cal-act-reschedule" data-id="${lec.id}" data-title="${escapeHtml(lec.title)}" data-date="${escapeHtml(lec.lectureDate || '')}" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
+            <i data-lucide="calendar" style="width:13px;height:13px;"></i> Change Date
           </button>
-          <button type="button" class="outline act-btn cal-act-filter-table" data-date="${dateStr}" style="padding:6px 12px;font-size:12px;">
-            🔍 In Table
+          <button type="button" class="outline act-btn cal-act-filter-table" data-date="${dateStr}" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
+            <i data-lucide="list" style="width:13px;height:13px;"></i> In Table
           </button>
         </div>
       </div>
     `;
   }).join('');
 
-  // Wire action buttons with real SQLite reflection
+  setTimeout(() => { try { lucide.createIcons(); } catch(e){} }, 50);
+
+  // Wire action buttons with real reflection
   detailList.querySelectorAll('.cal-act-review').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
@@ -1788,7 +1800,7 @@ function renderSelectedDateDetails() {
     });
   });
 
-  // Direct Publish/Unpublish toggle reflecting in SQLite recordings table
+  // Direct Publish/Unpublish toggle reflecting in recordings table
   detailList.querySelectorAll('.cal-act-publish-toggle').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
@@ -1808,11 +1820,11 @@ function renderSelectedDateDetails() {
         if (handleAuthError(res)) return;
 
         if (res.ok) {
-          toast(targetPublish ? '🚀 Lecture published to SQLite database!' : '🔒 Lecture unpublished in SQLite database.');
+          toast(targetPublish ? 'Lecture published successfully!' : 'Lecture unpublished.');
           await loadFacultyAnalytics(true);
           loadRecordings();
         } else {
-          toast('❌ Failed to update publish status in SQLite.');
+          toast('Failed to update publish status.');
           btn.disabled = false;
         }
       } catch (err) {
@@ -1875,7 +1887,7 @@ function renderRecentActivityStream() {
       rowsEl.innerHTML = `
         <tr><td colspan="5">
           <div class="ana-empty-state" style="padding:28px 16px;margin:8px 0;">
-            <div class="ana-empty-icon" style="width:42px;height:42px;font-size:18px;">🔍</div>
+            <div class="ana-empty-icon" style="width:42px;height:42px;"><i data-lucide="search"></i></div>
             <h4 class="ana-empty-title">No Matching Activity Logs</h4>
             <p class="ana-empty-desc">No student access events found matching "<b>${escapeHtml(q)}</b>".</p>
             <button type="button" class="outline" id="anaClearActFilterBtn" style="padding:5px 12px;font-size:12px;">Clear Filter</button>
@@ -1895,21 +1907,22 @@ function renderRecentActivityStream() {
       rowsEl.innerHTML = `
         <tr><td colspan="5">
           <div class="ana-empty-state" style="padding:28px 16px;margin:8px 0;">
-            <div class="ana-empty-icon" style="width:42px;height:42px;font-size:18px;">🎧</div>
+            <div class="ana-empty-icon" style="width:42px;height:42px;"><i data-lucide="headphones"></i></div>
             <h4 class="ana-empty-title">No Student Access Activity Yet</h4>
             <p class="ana-empty-desc">Real-time student study sessions, lecture audio streams, and verified accesses will appear here as students listen.</p>
           </div>
         </td></tr>
       `;
     }
+    if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
     return;
   }
 
   rowsEl.innerHTML = filteredLogs.map(log => {
     const isStream = log.action === 'STREAM';
     const actionBadge = isStream
-      ? '<span class="badge badge-published">🎧 Streamed Audio</span>'
-      : '<span class="badge badge-processing">👁️ Opened Lecture</span>';
+      ? '<span class="badge badge-published"><i data-lucide="headphones"></i> Streamed Audio</span>'
+      : '<span class="badge badge-processing"><i data-lucide="eye"></i> Opened Lecture</span>';
 
     return `
       <tr>
@@ -1927,7 +1940,7 @@ function renderRecentActivityStream() {
           <small class="muted" style="display:block;font-size:11px;">${formatLocalDisplayDate(log.timestamp)}</small>
         </td>
         <td>
-          <span style="display:inline-flex;align-items:center;gap:4px;color:#15803d;font-weight:700;font-size:12px;">
+          <span style="display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:700;font-size:12px;">
             <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Verified Student
           </span>
         </td>
@@ -1991,10 +2004,12 @@ function renderAnalyticsLecturesTable() {
   rowsEl.innerHTML = filteredStats.map(r => {
     const isPub = r.published;
     const statusBadge = isPub
-      ? '<span class="badge badge-published">🚀 PUBLISHED</span>'
-      : (r.status === 'READY' ? '<span class="badge badge-ready">✅ READY</span>' : '<span class="badge badge-draft">📝 DRAFT</span>');
+      ? '<span class="badge badge-published"><i data-lucide="check-circle-2"></i> Published</span>'
+      : (r.status === 'READY' ? '<span class="badge badge-ready"><i data-lucide="eye"></i> Ready</span>' : '<span class="badge badge-draft"><i data-lucide="file-edit"></i> Draft</span>');
 
-    const boxTag = r.storageBoxName ? `📦 ${escapeHtml(r.storageBoxName)}` : (r.subject ? escapeHtml(r.subject) : 'General');
+    const boxTag = r.storageBoxName
+      ? `<span class="box-tag"><i data-lucide="archive"></i> ${escapeHtml(r.storageBoxName)}</span>`
+      : (r.subject ? escapeHtml(r.subject) : 'General');
     const scopeLabel = r.allowedStudentsCount
       ? `${r.allowedStudentsCount} Enrolled Students`
       : 'All Registered Students';
@@ -2007,7 +2022,7 @@ function renderAnalyticsLecturesTable() {
         </td>
         <td>${boxTag}</td>
         <td>${statusBadge}</td>
-        <td><span class="badge" style="background:#f5f3ff;color:var(--p);font-weight:600;">${escapeHtml(scopeLabel)}</span></td>
+        <td><span class="badge" style="background:var(--bg-subtle);color:var(--p);font-weight:600;"><i data-lucide="users" style="width:11px;height:11px;"></i> ${escapeHtml(scopeLabel)}</span></td>
         <td><b>${r.studentsAccessed || 0}</b> students</td>
         <td><b>${r.playsCount || 0}</b> plays</td>
         <td><b>${escapeHtml(r.avgListeningTime || '0m 00s')}</b></td>
@@ -2245,11 +2260,19 @@ const facRetryUploadBtn = document.getElementById('facRetryUploadBtn');
 // Faculty Live Recorder DOM & State
 const facMicBtn = document.getElementById('facMicBtn');
 const facStartRecBtn = document.getElementById('facStartRecBtn');
+const facPauseRecBtn = document.getElementById('facPauseRecBtn');
 const facStopRecBtn = document.getElementById('facStopRecBtn');
 const facResetRecBtn = document.getElementById('facResetRecBtn');
 const facTimerEl = document.getElementById('facTimer');
 const facRecordMsg = document.getElementById('facRecordMsg');
 const facRecordStatus = document.getElementById('facRecordStatus');
+
+const facWaveformCanvas = document.getElementById('facWaveformCanvas');
+const facWaveformContainer = document.getElementById('facWaveformContainer');
+const waveformStatusBadge = document.getElementById('waveformStatusBadge');
+const waveformStatusText = document.getElementById('waveformStatusText');
+const waveformDecibelText = document.getElementById('waveformDecibelText');
+const recPulseDot = document.getElementById('recPulseDot');
 
 let facSelectedFile = null;
 let facUploadedDuration = '00:00';
@@ -2262,7 +2285,14 @@ let facRecTimerInterval = null;
 let facRecSeconds = 0;
 let facRecSpeechRecognition = null;
 let facIsRecording = false;
+let facIsPaused = false;
 let lastAttemptedStatus = 'READY';
+
+// Audio Context & Analyser for live responsive waveform
+let facAudioCtx = null;
+let facAnalyser = null;
+let facAudioSource = null;
+let facWaveformAnimId = null;
 
 // Switch between Upload Audio File tab and Record Lecture Live tab
 if (facUploadTab && facRecordTab && facUploadPane && facRecordPane) {
@@ -2338,9 +2368,270 @@ function formatShortDuration(sec) {
   return `${m}:${s}`;
 }
 
+// ── Live Responsive Waveform Engine ──────────────────────────────────────
+function drawIdleWaveform() {
+  if (facIsRecording && !facIsPaused) return;
+  const canvas = document.getElementById('facWaveformCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth || 540;
+  const height = canvas.clientHeight || 72;
+
+  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+
+  // Subtle center line
+  const centerY = height / 2;
+  ctx.strokeStyle = 'rgba(232, 227, 218, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(width, centerY);
+  ctx.stroke();
+
+  // Subtle harmonic baseline wave
+  const time = Date.now() * 0.0022;
+  ctx.beginPath();
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = facIsPaused ? '#d97706' : 'rgba(88, 28, 56, 0.35)';
+
+  for (let x = 0; x <= width; x += 3) {
+    const normX = x / width;
+    const envelope = Math.sin(normX * Math.PI);
+    const y = centerY + Math.sin(normX * 12 + time) * 6 * envelope + Math.sin(normX * 6 - time * 0.7) * 4 * envelope;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  if (facIsPaused) {
+    ctx.fillStyle = '#b45309';
+    ctx.font = '600 11px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('RECORDING PAUSED', width / 2, centerY - 14);
+  }
+  ctx.restore();
+
+  if (!facIsRecording || facIsPaused) {
+    facWaveformAnimId = requestAnimationFrame(drawIdleWaveform);
+  }
+}
+
+function startWaveformVisualization(stream) {
+  cancelAnimationFrame(facWaveformAnimId);
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!facAudioCtx || facAudioCtx.state === 'closed') {
+      facAudioCtx = new AudioContextClass();
+    } else if (facAudioCtx.state === 'suspended') {
+      facAudioCtx.resume();
+    }
+
+    facAudioSource = facAudioCtx.createMediaStreamSource(stream);
+    facAnalyser = facAudioCtx.createAnalyser();
+    facAnalyser.fftSize = 256;
+    facAnalyser.smoothingTimeConstant = 0.78;
+    facAudioSource.connect(facAnalyser);
+
+    const canvas = document.getElementById('facWaveformCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const bufferLength = facAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const container = document.getElementById('facWaveformContainer');
+    if (container) {
+      container.style.display = 'block';
+    }
+
+    function renderFrame() {
+      if (!facIsRecording) return;
+      if (facIsPaused) {
+        facWaveformAnimId = requestAnimationFrame(renderFrame);
+        return;
+      }
+
+      facWaveformAnimId = requestAnimationFrame(renderFrame);
+      facAnalyser.getByteFrequencyData(dataArray);
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth || 540;
+      const height = canvas.clientHeight || 72;
+
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      const centerY = height / 2;
+      ctx.strokeStyle = 'rgba(232, 227, 218, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.stroke();
+
+      const barCount = 48;
+      const barSpacing = 3;
+      const totalSpacing = barSpacing * (barCount - 1);
+      const barWidth = Math.max(2, (width - 24 - totalSpacing) / barCount);
+      const startX = (width - (barCount * barWidth + totalSpacing)) / 2;
+
+      let sum = 0;
+      const step = Math.floor(bufferLength / barCount) || 1;
+
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#be123c');
+      grad.addColorStop(0.3, '#9f1239');
+      grad.addColorStop(0.5, '#581c38');
+      grad.addColorStop(0.7, '#9f1239');
+      grad.addColorStop(1, '#be123c');
+
+      ctx.fillStyle = grad;
+
+      for (let i = 0; i < barCount; i++) {
+        const val = dataArray[i * step] || 0;
+        sum += val;
+        const percent = val / 255;
+        const barHeight = Math.max(4, percent * (height - 14));
+        const x = startX + i * (barWidth + barSpacing);
+        const y = centerY - barHeight / 2;
+        const r = Math.min(barWidth / 2, 2.5);
+
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(x, y, barWidth, barHeight, r);
+        } else {
+          ctx.rect(x, y, barWidth, barHeight);
+        }
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    renderFrame();
+  } catch (e) {
+    console.error('Audio visualization initialization error:', e);
+  }
+}
+
+function stopWaveformVisualization() {
+  cancelAnimationFrame(facWaveformAnimId);
+  if (facAudioSource) {
+    try { facAudioSource.disconnect(); } catch (e) {}
+    facAudioSource = null;
+  }
+  if (facAnalyser) {
+    try { facAnalyser.disconnect(); } catch (e) {}
+    facAnalyser = null;
+  }
+  if (facAudioCtx && facAudioCtx.state !== 'closed') {
+    try { facAudioCtx.close(); } catch (e) {}
+    facAudioCtx = null;
+  }
+
+  const container = document.getElementById('facWaveformContainer');
+  if (container) container.style.display = 'none';
+}
+
+function toggleFacultyPauseRecording() {
+  if (!facIsRecording || !facMediaRecorder) return;
+  const pauseBtn = document.getElementById('facPauseRecBtn');
+  const statusBadge = document.getElementById('waveformStatusBadge');
+  const statusText = document.getElementById('waveformStatusText');
+  const pulseDot = document.getElementById('recPulseDot');
+  const container = document.getElementById('facWaveformContainer');
+  const decibelText = document.getElementById('waveformDecibelText');
+
+  if (!facIsPaused) {
+    facIsPaused = true;
+    try { facMediaRecorder.pause(); } catch (e) {}
+    if (facRecSpeechRecognition) {
+      try { facRecSpeechRecognition.stop(); } catch (e) {}
+    }
+    clearInterval(facRecTimerInterval);
+
+    if (facRecordMsg) facRecordMsg.textContent = 'Recording Paused';
+    if (facRecordStatus) facRecordStatus.textContent = 'Recording is paused. Click "Resume" to continue capturing audio.';
+    if (pauseBtn) {
+      pauseBtn.innerHTML = '<i data-lucide="play"></i> Resume';
+      pauseBtn.classList.remove('outline');
+      pauseBtn.classList.add('primary');
+    }
+    if (container) {
+      container.classList.remove('recording');
+      container.classList.add('paused');
+    }
+    if (statusBadge) {
+      statusBadge.classList.remove('live');
+      statusBadge.classList.add('paused');
+    }
+    if (statusText) statusText.textContent = 'Recording Paused';
+    if (pulseDot) pulseDot.className = 'rec-pulse-dot paused';
+    if (decibelText) decibelText.textContent = 'Paused';
+    if (facMicBtn) facMicBtn.classList.remove('recording');
+    drawIdleWaveform();
+    toast('Recording paused.');
+  } else {
+    facIsPaused = false;
+    try { facMediaRecorder.resume(); } catch (e) {}
+    if (facRecSpeechRecognition) {
+      try { facRecSpeechRecognition.start(); } catch (e) {}
+    }
+    facRecTimerInterval = setInterval(() => {
+      facRecSeconds++;
+      if (facTimerEl) facTimerEl.textContent = formatTimerClock(facRecSeconds);
+    }, 1000);
+
+    if (facRecordMsg) facRecordMsg.textContent = 'Recording Live Classroom Audio...';
+    if (facRecordStatus) facRecordStatus.textContent = 'Speak clearly into your microphone. Click "Stop Recording" when finished.';
+    if (pauseBtn) {
+      pauseBtn.innerHTML = '<i data-lucide="pause"></i> Pause';
+      pauseBtn.classList.remove('primary');
+      pauseBtn.classList.add('outline');
+    }
+    if (container) {
+      container.classList.add('recording');
+      container.classList.remove('paused');
+    }
+    if (statusBadge) {
+      statusBadge.classList.add('live');
+      statusBadge.classList.remove('paused');
+    }
+    if (statusText) statusText.textContent = 'Live Audio Recording';
+    if (pulseDot) pulseDot.className = 'rec-pulse-dot recording';
+    if (facMicBtn) facMicBtn.classList.add('recording');
+    toast('Recording resumed.');
+  }
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+
+function pauseBtnReset() {
+  const pauseBtn = document.getElementById('facPauseRecBtn');
+  if (pauseBtn) {
+    pauseBtn.innerHTML = '<i data-lucide="pause"></i> Pause';
+    pauseBtn.className = 'outline disabled';
+    pauseBtn.disabled = true;
+  }
+}
+
 async function startFacultyLiveRecording() {
   if (!isFacultyRole()) {
-    toast('❌ ACCESS DENIED: Only Faculty can record lectures.');
+    toast('Access denied. Faculty role required.');
     return;
   }
   if (facIsRecording) return;
@@ -2353,6 +2644,7 @@ async function startFacultyLiveRecording() {
     facRecSeconds = 0;
     facLiveSpeechTranscript = '';
     facIsRecording = true;
+    facIsPaused = false;
 
     let options = {};
     if (typeof MediaRecorder !== 'undefined') {
@@ -2413,21 +2705,29 @@ async function startFacultyLiveRecording() {
     }, 1000);
 
     if (facMicBtn) facMicBtn.classList.add('recording');
-    if (facRecordMsg) facRecordMsg.textContent = '🔴 Recording Live Classroom Audio...';
-    if (facRecordStatus) facRecordStatus.textContent = 'Speak clearly into your microphone. Click "⏹️ Stop Recording" when finished.';
+    if (facRecordMsg) facRecordMsg.textContent = 'Recording Live Classroom Audio...';
+    if (facRecordStatus) facRecordStatus.textContent = 'Speak clearly into your microphone. Click "Stop Recording" when finished.';
     if (facStartRecBtn) {
       facStartRecBtn.disabled = true;
       facStartRecBtn.classList.add('disabled');
+    }
+    if (facPauseRecBtn) {
+      facPauseRecBtn.disabled = false;
+      facPauseRecBtn.classList.remove('disabled');
+      facPauseRecBtn.innerHTML = '<i data-lucide="pause"></i> Pause';
     }
     if (facStopRecBtn) {
       facStopRecBtn.disabled = false;
       facStopRecBtn.classList.remove('disabled');
     }
-    toast('🎙️ Live lecture recording started.');
+
+    startWaveformVisualization(stream);
+    toast('Live lecture recording started.');
+    if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
   } catch (err) {
-    toast('❌ Microphone access denied or unavailable. Please check permissions or upload an audio file.');
+    toast('Microphone access denied or unavailable. Please check permissions.');
     if (facRecordStatus) {
-      facRecordStatus.textContent = '❌ Microphone permission denied. Please allow microphone access or use "📤 Upload Audio File".';
+      facRecordStatus.textContent = 'Microphone permission denied. Please allow microphone access or select a pre-recorded file.';
     }
   }
 }
@@ -2435,6 +2735,7 @@ async function startFacultyLiveRecording() {
 function stopFacultyLiveRecording() {
   if (!facIsRecording) return;
   facIsRecording = false;
+  facIsPaused = false;
   clearInterval(facRecTimerInterval);
 
   if (facRecSpeechRecognition) {
@@ -2449,18 +2750,26 @@ function stopFacultyLiveRecording() {
     facMediaStream = null;
   }
 
+  stopWaveformVisualization();
+
   if (facMicBtn) facMicBtn.classList.remove('recording');
-  if (facRecordMsg) facRecordMsg.textContent = '✅ Recording Captured — Ready to Save';
-  if (facRecordStatus) facRecordStatus.textContent = 'Click "💾 Save Recording & Process AI" below to generate transcript & summary.';
+  if (facRecordMsg) facRecordMsg.textContent = 'Recording Captured — Ready to Save';
+  if (facRecordStatus) facRecordStatus.textContent = 'Click "Save Recording & Process AI" below to generate transcript & summary.';
   if (facStartRecBtn) {
     facStartRecBtn.disabled = false;
     facStartRecBtn.classList.remove('disabled');
+  }
+  if (facPauseRecBtn) {
+    facPauseRecBtn.disabled = true;
+    facPauseRecBtn.classList.add('disabled');
+    pauseBtnReset();
   }
   if (facStopRecBtn) {
     facStopRecBtn.disabled = true;
     facStopRecBtn.classList.add('disabled');
   }
-  toast('⏹️ Recording stopped. Ready to save and process!');
+  toast('Recording captured. Ready to save and process.');
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 function resetFacultyLiveRecording() {
@@ -2471,13 +2780,22 @@ function resetFacultyLiveRecording() {
   facRecSeconds = 0;
   facRecChunks = [];
   facLiveSpeechTranscript = '';
+  facIsPaused = false;
+
+  stopWaveformVisualization();
+
   if (facTimerEl) facTimerEl.textContent = '00:00:00';
   if (facMicBtn) facMicBtn.classList.remove('recording');
-  if (facRecordMsg) facRecordMsg.textContent = '🎙️ Start Recording Lecture';
-  if (facRecordStatus) facRecordStatus.textContent = 'Click microphone or "🎙️ Start Recording" to record live classroom audio';
+  if (facRecordMsg) facRecordMsg.textContent = 'Start Recording Lecture';
+  if (facRecordStatus) facRecordStatus.textContent = 'Click microphone or "Start Recording" to record live classroom audio';
   if (facStartRecBtn) {
     facStartRecBtn.disabled = false;
     facStartRecBtn.classList.remove('disabled');
+  }
+  if (facPauseRecBtn) {
+    facPauseRecBtn.disabled = true;
+    facPauseRecBtn.classList.add('disabled');
+    pauseBtnReset();
   }
   if (facStopRecBtn) {
     facStopRecBtn.disabled = true;
@@ -2485,6 +2803,7 @@ function resetFacultyLiveRecording() {
   }
   clearFacSelectedFile();
   toast('Recorder reset.');
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 if (facMicBtn) {
@@ -2496,12 +2815,18 @@ if (facMicBtn) {
 if (facStartRecBtn) {
   facStartRecBtn.onclick = () => startFacultyLiveRecording();
 }
+if (facPauseRecBtn) {
+  facPauseRecBtn.onclick = () => toggleFacultyPauseRecording();
+}
 if (facStopRecBtn) {
   facStopRecBtn.onclick = () => stopFacultyLiveRecording();
 }
 if (facResetRecBtn) {
   facResetRecBtn.onclick = () => resetFacultyLiveRecording();
 }
+
+// Draw idle waveform baseline on load
+setTimeout(drawIdleWaveform, 150);
 
 function validateAudioFile(file) {
   if (!file) return { valid: false, error: 'Please select or record an audio file first.' };
@@ -2639,7 +2964,11 @@ async function submitFacultyLecture(initialStatus = 'READY') {
   const title = (document.getElementById('facTitleInput')?.value || '').trim();
   const storageBoxId = (document.getElementById('facStorageBoxSelect')?.value || '').trim();
   let subject = (document.getElementById('facSubjectInput')?.value || '').trim();
-  const classCourse = (document.getElementById('facCourseInput')?.value || 'SE Computer Engineering').trim();
+  const branch = (document.getElementById('facBranchInput')?.value || 'Computer Engineering').trim();
+  const year = (document.getElementById('facYearInput')?.value || 'Second Year (SE)').trim();
+  const sem = (document.getElementById('facSemInput')?.value || 'Semester 3').trim();
+  const div = (document.getElementById('facDivInput')?.value || 'Division A').trim();
+  const classCourse = `${branch} • ${year} • ${sem} • ${div}`;
   const lectureDate = (document.getElementById('facDateInput')?.value || new Date().toISOString().slice(0, 10)).trim();
   const description = (document.getElementById('facDescInput')?.value || '').trim();
   const professorName = localStorage.getItem('vaani_user_name') || 'Dr. Ananya Sharma';
@@ -3438,19 +3767,19 @@ function renderStorageBoxesGrid() {
     const descText = box.description ? escapeHtml(box.description) : '<em style="color:var(--muted)">No description provided</em>';
 
     const facultyBtns = isFaculty ? `
-      <button type="button" class="outline act-btn edit-box-btn" data-box-id="${box.id}" title="Rename / Edit Description">✏ Edit</button>
-      <button type="button" class="outline act-btn add-rec-to-box-btn" data-box-id="${box.id}" title="Add Recording to this Box">📤 Add Recording</button>
-      <button type="button" class="outline act-btn delete-box-btn" data-box-id="${box.id}" style="color:#d32f2f;border-color:#ffcdd2;" title="Delete Storage Box">🗑 Delete</button>
+      <button type="button" class="outline act-btn edit-box-btn" data-box-id="${box.id}" title="Rename / Edit Description"><i data-lucide="edit-3"></i> Edit</button>
+      <button type="button" class="outline act-btn add-rec-to-box-btn" data-box-id="${box.id}" title="Add Recording to this Box"><i data-lucide="plus"></i> Add Lecture</button>
+      <button type="button" class="outline act-btn delete-box-btn" data-box-id="${box.id}" style="color:var(--danger);border-color:var(--danger-border);" title="Delete Storage Box"><i data-lucide="trash-2"></i> Delete</button>
     ` : '';
 
     return `
       <div class="box-card" data-box-id="${box.id}">
         <div class="box-card-top">
           <div class="box-icon-title">
-            <span class="box-emoji">📦</span>
+            <div class="box-icon-wrap"><i data-lucide="archive"></i></div>
             <div style="min-width:0;">
               <h3 class="box-card-name" title="${escapeHtml(box.name)}">${escapeHtml(box.name)}</h3>
-              <span class="badge" style="background:#f0eaff;color:var(--p);font-size:11.5px;font-weight:700;">${countText}</span>
+              <span class="badge" style="background:var(--pale);color:var(--p);font-size:11.5px;font-weight:700;"><i data-lucide="layers" style="width:11px;height:11px;"></i> ${countText}</span>
             </div>
           </div>
         </div>
@@ -3459,18 +3788,20 @@ function renderStorageBoxesGrid() {
 
         <div class="box-card-meta">
           <div class="box-card-meta-row">
-            <span>👨‍🏫 <b>${escapeHtml(creatorText)}</b></span>
-            <span>📅 <b>${escapeHtml(updatedText)}</b></span>
+            <span><i data-lucide="user" style="width:13px;height:13px;color:var(--muted);vertical-align:-2px;"></i> <b>${escapeHtml(creatorText)}</b></span>
+            <span><i data-lucide="calendar" style="width:13px;height:13px;color:var(--muted);vertical-align:-2px;"></i> <b>${escapeHtml(updatedText)}</b></span>
           </div>
         </div>
 
         <div class="box-card-actions">
-          <button type="button" class="primary act-btn open-box-btn" data-box-id="${box.id}" style="padding:7px 14px;font-weight:700;">📂 Open Box</button>
+          <button type="button" class="primary act-btn open-box-btn" data-box-id="${box.id}" style="padding:7px 14px;font-weight:700;"><i data-lucide="folder-open"></i> Open Box</button>
           ${facultyBtns}
         </div>
       </div>
     `;
   }).join('');
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 async function openStorageBoxDetail(boxId) {
@@ -3515,7 +3846,7 @@ async function openStorageBoxDetail(boxId) {
   if (crumbName) crumbName.textContent = boxData.name;
   if (countEl) {
     const count = getBoxCountForRole(boxData, isFaculty) || boxRecordings.length;
-    countEl.textContent = `${count} Recording${count === 1 ? '' : 's'}`;
+    countEl.innerHTML = `<i data-lucide="archive"></i> ${count} Recording${count === 1 ? '' : 's'}`;
   }
   if (descEl) descEl.textContent = boxData.description || 'No description provided for this storage box.';
   if (creatorEl) creatorEl.textContent = boxData.createdBy || 'Faculty';
@@ -3564,29 +3895,29 @@ function renderBoxRecordings(list) {
   tbody.innerHTML = filtered.map(r => {
     const audioSrc = r.audioDataUrl ? r.audioDataUrl : `${API_BASE}/${r.id}/audio`;
     const audioPlayerHtml = r.hasAudio
-      ? `<audio controls src="${audioSrc}" style="width:170px;height:30px;vertical-align:middle;"></audio>`
+      ? `<audio controls src="${audioSrc}" style="width:170px;height:30px;vertical-align:middle;border-radius:6px;"></audio>`
       : '<small class="muted">No Audio</small>';
     const displayDate = formatLocalDisplayDate(r.createdAtIso || r.createdAt);
 
-    let statusBadge = '<span class="badge badge-published">🚀 PUBLISHED</span>';
-    if (r.facultyStatus === 'DRAFT') statusBadge = '<span class="badge badge-draft">📝 DRAFT</span>';
-    else if (r.facultyStatus === 'READY') statusBadge = '<span class="badge badge-ready">👁️ READY</span>';
-    else if (r.facultyStatus === 'PROCESSING') statusBadge = '<span class="badge badge-processing">⏳ PROCESSING</span>';
+    let statusBadge = '<span class="badge badge-published"><i data-lucide="check-circle-2"></i> Published</span>';
+    if (r.facultyStatus === 'DRAFT') statusBadge = '<span class="badge badge-draft"><i data-lucide="file-edit"></i> Draft</span>';
+    else if (r.facultyStatus === 'READY') statusBadge = '<span class="badge badge-ready"><i data-lucide="eye"></i> Ready</span>';
+    else if (r.facultyStatus === 'PROCESSING') statusBadge = '<span class="badge badge-processing"><i data-lucide="loader-2"></i> Processing</span>';
 
     let actionButtons = '';
     if (isFaculty) {
       actionButtons = `
-        <button type="button" class="primary act-btn fac-review-btn" data-id="${r.id}" title="Review AI transcript and summary">👁 Review</button>
-        <button type="button" class="outline act-btn fac-review-btn" data-id="${r.id}" data-edit="1" title="Edit lecture content">✏ Edit</button>
+        <button type="button" class="primary act-btn fac-review-btn" data-id="${r.id}" title="Review AI transcript and summary"><i data-lucide="eye"></i> Review</button>
+        <button type="button" class="outline act-btn fac-review-btn" data-id="${r.id}" data-edit="1" title="Edit lecture content"><i data-lucide="edit-3"></i> Edit</button>
         <button type="button" class="outline act-btn fac-pub-toggle" data-id="${r.id}" data-publish="${r.published ? '0' : '1'}">
-          ${r.published ? '🔒 Unpublish' : '🚀 Publish'}
+          ${r.published ? '<i data-lucide="lock"></i> Unpublish' : '<i data-lucide="send"></i> Publish'}
         </button>
-        <button type="button" class="outline act-btn delete-rec" data-id="${r.id}" style="color:#d32f2f;border-color:#ffcdd2;" title="Delete lecture">🗑</button>
+        <button type="button" class="outline act-btn delete-rec" data-id="${r.id}" style="color:var(--danger);border-color:var(--danger-border);" title="Delete lecture"><i data-lucide="trash-2"></i></button>
       `;
     } else {
       actionButtons = `
-        <button type="button" class="primary act-btn view" data-id="${r.id}">▶ Listen &amp; Read Transcript</button>
-        <button type="button" class="outline act-btn" onclick="openDetail('${r.id}'); setTimeout(()=>document.querySelector('[data-detail=summary]')?.click(), 50);">📄 Summary</button>
+        <button type="button" class="primary act-btn view" data-id="${r.id}"><i data-lucide="headphones"></i> Listen &amp; Read</button>
+        <button type="button" class="outline act-btn" onclick="openDetail('${r.id}'); setTimeout(()=>document.querySelector('[data-detail=summary]')?.click(), 50);"><i data-lucide="sparkles"></i> Summary</button>
       `;
     }
 
@@ -3601,12 +3932,14 @@ function renderBoxRecordings(list) {
       </tr>
     `;
   }).join('');
+
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
 }
 
 // ── Storage Box Modal Functions ──────────────────────────────────────────────
 function openCreateBoxModal(presetName = '', presetDesc = '') {
   if (!isFacultyRole()) {
-    toast('❌ ACCESS DENIED: Only Faculty can create storage boxes.');
+    toast('Access denied. Only Faculty can create storage boxes.');
     return;
   }
   const modal = document.getElementById('boxModal');
@@ -3616,19 +3949,20 @@ function openCreateBoxModal(presetName = '', presetDesc = '') {
   const descIn = document.getElementById('boxModalDesc');
   const subBtn = document.getElementById('boxModalSubmitBtn');
 
-  if (titleEl) titleEl.textContent = '📦 Create Storage Box';
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="archive"></i> Create Storage Box';
   if (idIn) idIn.value = '';
   if (nameIn) nameIn.value = presetName;
   if (descIn) descIn.value = presetDesc;
-  if (subBtn) subBtn.textContent = '📦 Create Box';
+  if (subBtn) subBtn.innerHTML = '<i data-lucide="plus"></i> Create Box';
 
   if (modal) modal.classList.remove('hidden');
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
   setTimeout(() => nameIn?.focus(), 50);
 }
 
 function openEditBoxModal(boxId) {
   if (!isFacultyRole()) {
-    toast('❌ ACCESS DENIED: Only Faculty can edit storage boxes.');
+    toast('Access denied. Only Faculty can edit storage boxes.');
     return;
   }
   const box = storageBoxes.find(b => Number(b.id) === Number(boxId));
@@ -3641,13 +3975,14 @@ function openEditBoxModal(boxId) {
   const descIn = document.getElementById('boxModalDesc');
   const subBtn = document.getElementById('boxModalSubmitBtn');
 
-  if (titleEl) titleEl.textContent = '✏ Edit Storage Box';
+  if (titleEl) titleEl.innerHTML = '<i data-lucide="edit-3"></i> Edit Storage Box';
   if (idIn) idIn.value = String(box.id);
   if (nameIn) nameIn.value = box.name || '';
   if (descIn) descIn.value = box.description || '';
-  if (subBtn) subBtn.textContent = '💾 Save Changes';
+  if (subBtn) subBtn.innerHTML = '<i data-lucide="check"></i> Save Changes';
 
   if (modal) modal.classList.remove('hidden');
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
   setTimeout(() => nameIn?.focus(), 50);
 }
 
